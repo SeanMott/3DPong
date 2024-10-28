@@ -50,7 +50,7 @@ BTD_INCLUDE,
 VULKAN_SDK_MANUAL_OVERRIDE,
 
 "TyGUI/includes",
-"Venders/ImGUI",
+"TyGUI/" .. IMGUI_INCLUDE,
 
 --"C:/GameDev/SurvivalBasic/Smok/includes",
 "Smok/includes",
