@@ -25,6 +25,9 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 #include <BTDSTD/Wireframe/FrameBuffer.hpp>
 #include <BTDSTD/Wireframe/SyncObjects.hpp>
 
+//serilize
+#include <BTDSTD/Wireframe/Pipeline/ShaderSerilize.hpp>
+
 #include <TyGUI/WidgetRenderer.hpp>
 
 #include <Smok/Assets/Mesh.hpp>
@@ -46,7 +49,6 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 #include <thread>
 #include <vector>
 
-
 void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wireframe::Pipeline::GraphicsPipeline& meshPipeline,
 	Wireframe::Renderpass::Renderpass& renderpass,
 	Pong3D::Core::Engine* engine)
@@ -54,29 +56,58 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	Wireframe::Device::GPU* GPU = &engine->GPU;
 
 	Wireframe::Pipeline::PipelineSettings pipelineSettings;
-	pipelineSettings.SetPipelineSettingToDefault_InputAssemblyState();
-	pipelineSettings.SetPipelineSettingToDefault_RasterizerState();
-	pipelineSettings.SetPipelineSettingToDefault_MultisampleState();
-	pipelineSettings.SetPipelineSettingToDefault_ColorBlendAttachmentState();
-	pipelineSettings.SetPipelineSettingToDefault_DepthStencilState();
+	//pipelineSettings.SetPipelineSettingToDefault_InputAssemblyState();
+	//pipelineSettings.SetPipelineSettingToDefault_RasterizerState();
+	//pipelineSettings.SetPipelineSettingToDefault_MultisampleState();
+	//pipelineSettings.SetPipelineSettingToDefault_ColorBlendAttachmentState();
+	//pipelineSettings.SetPipelineSettingToDefault_DepthStencilState();
+	//pipelineSettings.SetPipelineSettingToDefault_VertexInputState();
+	pipelineSettings.SetPipelineSettingToDefault_All();
 
-	//pipelineSettings.SetPipelineSettingToDefault_ViewportAndScissorState();
+	//wrtes the common settings to a settings file
 
-
-	pipelineSettings.SetPipelineSettingToDefault_VertexInputState();
+	//sets the vertex layout
 	Wireframe::Pipeline::VertexInputDescription vertexDescription = Smok::Asset::Mesh::Vertex::GenerateVertexInputDescription();
 	pipelineSettings._vertexInputInfo.pVertexAttributeDescriptions = vertexDescription.attributes.data();
 	pipelineSettings._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
 	pipelineSettings._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
 	pipelineSettings._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
 
-	pipelineSettings.SetPipelineSettingToDefault_ShaderStages();
+	//write vertex layout to file
+
+	//loads the shader settings and generates the shaders for the pipeline
+	/*
+	std::vector<Wireframe::Shader::Serilize::ShaderSettings> shaderSettings;
+	Wireframe::Shader::LoadShaderSettings_Development("shaders/Mesh.json", shaderSettings);
+	const size_t shaderCount = shaderSettings.size();
+	std::vector<Wireframe::Shader::ShaderModule> shaders; shaders.resize(shaderCount);
+	pipelineSettings._shaderStages.reserve(shaderCount);
+	for(size_t i = 0; i < shaderCount; ++i)
+	{
+		if(!shaders[i].Create(shaderSettings[i].binaryFilepath, GPU))
+		{
+			fmt::print("Wireframe Error: Shader || Create || Failed to create a shader from a binary file at \"{}\". Please make sure the path actually exists\n", shaderSettings[i].binaryFilepath);
+			continue;
+		}
+
+		pipelineSettings._shaderStages.emplace_back(Wireframe::Shader::GenerateShaderStageInfoForPipeline(shaders[i], shaderSettings[i].stage, shaderSettings[i].entryPointFuncName));
+	}
+	*/
+
+	//sets the shader
 	Wireframe::Shader::ShaderModule meshVertShader;
 	if (!meshVertShader.Create("shaders/Compiled/mesh.vert.spv", GPU)) {}
 	Wireframe::Shader::ShaderModule meshFragShader;
 	if (!meshFragShader.Create("shaders/Compiled/mesh.frag.spv", GPU)) {}
-	pipelineSettings._shaderStages = { Wireframe::Shader::GenerateVertexShaderStage(meshVertShader), Wireframe::Shader::GenerateFragmentShaderStage(meshFragShader) };
+	pipelineSettings._shaderStages = { Wireframe::Shader::GenerateShaderStageInfoForPipeline(meshVertShader, Wireframe::Shader::Util::ShaderStage::Vertex),
+		Wireframe::Shader::GenerateShaderStageInfoForPipeline(meshFragShader, Wireframe::Shader::Util::ShaderStage::Fragment) };
 
+	//write shaders settings to a file
+	Wireframe::Shader::Serilize::ShaderSerilizeData d;
+	BTD::IO::FileInfo shaderSettings("shaders/Mesh." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr());
+	Wireframe::Shader::Serilize::WriteShaderDataToFile(shaderSettings, d, true);
+
+	//generates a layout and the push constants
 	Wireframe::Pipeline::PipelineLayout_CreateInfo pipelineLayoutInfo;
 	VkPushConstantRange push_constant;
 	push_constant.offset = 0;
@@ -84,6 +115,8 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	pipelineLayoutInfo.pushConstants.resize(1); pipelineLayoutInfo.pushConstants[0] = push_constant;
 	pipelineLayoutInfo.pushConstantNames.resize(1); pipelineLayoutInfo.pushConstantNames[0] = "Mesh Data";
+
+	//write layout to file
 
 	meshPipelineLayout.Create(pipelineLayoutInfo, GPU);
 	meshPipeline.Create(pipelineSettings, meshPipelineLayout, renderpass._renderPass, GPU);

@@ -8,8 +8,8 @@ layout (location = 0) out vec3 outColor;
 //push constants block
 layout( push_constant ) uniform constants
 {
+	mat4 render_matrix;
  vec4 color;
- mat4 render_matrix;
 } PushConstants;
 
 void main() 

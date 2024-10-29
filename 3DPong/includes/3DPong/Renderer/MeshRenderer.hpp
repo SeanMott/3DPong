@@ -14,8 +14,8 @@ namespace Pong3D::Renderer
 {
 	struct MeshPushConstants
 	{
-		glm::vec4 color = glm::vec4(200.0f, 0.0f, 215.0f, 255.0f);
 		glm::mat4 render_matrix = glm::mat4(1.0f);
+		alignas(16) glm::vec4 color = glm::vec4(200.0f, 0.0f, 215.0f, 255.0f);
 	};
 
 	//defines a static mesh render operation

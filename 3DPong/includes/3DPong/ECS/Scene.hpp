@@ -59,8 +59,6 @@ namespace Pong3D::Scene
 			cam.flag = EntityFlag::Camera;
 		
 			//creates components
-			//engine->smokCompECSRegistery.CreateComponent_Transform(transform, cam.ID);
-			//engine->smokCompECSRegistery.CreateComponent_Camera(cameraSettings, cam.ID);
 			BTD::ECS::addComponent(cam.ID, transform);
 			BTD::ECS::addComponent(cam.ID, cameraSettings);
 
@@ -82,8 +80,6 @@ namespace Pong3D::Scene
 			rider.flag = EntityFlag::Rider;
 
 			//creates components
-			//engine->smokCompECSRegistery.CreateComponent_Transform(transform, rider.ID);
-			//engine->smokCompECSRegistery.CreateComponent_MeshRenderer(meshRenderer, rider.ID);
 			BTD::ECS::addComponent(rider.ID, transform);
 			BTD::ECS::addComponent(rider.ID, meshRenderer);
 
