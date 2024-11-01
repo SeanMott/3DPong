@@ -56,12 +56,6 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	Wireframe::Device::GPU* GPU = &engine->GPU;
 
 	Wireframe::Pipeline::PipelineSettings pipelineSettings;
-	//pipelineSettings.SetPipelineSettingToDefault_InputAssemblyState();
-	//pipelineSettings.SetPipelineSettingToDefault_RasterizerState();
-	//pipelineSettings.SetPipelineSettingToDefault_MultisampleState();
-	//pipelineSettings.SetPipelineSettingToDefault_ColorBlendAttachmentState();
-	//pipelineSettings.SetPipelineSettingToDefault_DepthStencilState();
-	//pipelineSettings.SetPipelineSettingToDefault_VertexInputState();
 	pipelineSettings.SetPipelineSettingToDefault_All();
 
 	//wrtes the common settings to a settings file
@@ -94,27 +88,49 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	}
 	*/
 
-	//sets the shader
+	//bulk writes vertex and fragment shaders
+	//Wireframe::Shader::Serilize::ShaderSerilizeData s1;
+	//s1.binaryFilepath = "shaders/Compiled/mesh.vert.spv";
+	//s1.entryPointFuncName = "main";
+	//s1.stage = Wireframe::Shader::Util::ShaderStage::Vertex;
+	//s1.name = "mesh_vertex";
+	//
+	//BTD::IO::FileInfo shaderSettings("shaders/" + s1.name + "." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr());
+	//Wireframe::Shader::Serilize::WriteShaderDataToFile(shaderSettings, s1, false);
+	//
+	//Wireframe::Shader::Serilize::ShaderSerilizeData s2;
+	//s2.binaryFilepath = "shaders/Compiled/mesh.frag.spv";
+	//s2.entryPointFuncName = "main";
+	//s2.stage = Wireframe::Shader::Util::ShaderStage::Fragment;
+	//s2.name = "mesh_fragment";
+	//
+	//shaderSettings = BTD::IO::FileInfo("shaders/" + s2.name + "." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr());
+	//Wireframe::Shader::Serilize::WriteShaderDataToFile(shaderSettings, s2, false);
+
+	//loads the shaders
 	Wireframe::Shader::ShaderModule meshVertShader;
-	if (!meshVertShader.Create("shaders/Compiled/mesh.vert.spv", GPU)) {}
+	Wireframe::Shader::Serilize::ShaderSerilizeData vertex;
+	Wireframe::Shader::Serilize::LoadShaderDataFromFile(BTD::IO::FileInfo("shaders/mesh_vertex." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr()),
+		vertex, false);
+	if (!meshVertShader.Create(vertex.binaryFilepath.c_str(), GPU)) {}
+	
 	Wireframe::Shader::ShaderModule meshFragShader;
-	if (!meshFragShader.Create("shaders/Compiled/mesh.frag.spv", GPU)) {}
+	Wireframe::Shader::Serilize::ShaderSerilizeData fragment;
+	Wireframe::Shader::Serilize::LoadShaderDataFromFile(BTD::IO::FileInfo("shaders/mesh_fragment." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr()),
+		fragment, false);
+	if (!meshFragShader.Create(fragment.binaryFilepath.c_str(), GPU)) {}
+	
 	pipelineSettings._shaderStages = { Wireframe::Shader::GenerateShaderStageInfoForPipeline(meshVertShader, Wireframe::Shader::Util::ShaderStage::Vertex),
 		Wireframe::Shader::GenerateShaderStageInfoForPipeline(meshFragShader, Wireframe::Shader::Util::ShaderStage::Fragment) };
 
-	//write shaders settings to a file
-	Wireframe::Shader::Serilize::ShaderSerilizeData d;
-	BTD::IO::FileInfo shaderSettings("shaders/Mesh." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr());
-	Wireframe::Shader::Serilize::WriteShaderDataToFile(shaderSettings, d, true);
-
 	//generates a layout and the push constants
 	Wireframe::Pipeline::PipelineLayout_CreateInfo pipelineLayoutInfo;
-	VkPushConstantRange push_constant;
-	push_constant.offset = 0;
-	push_constant.size = sizeof(Pong3D::Renderer::MeshPushConstants);
-	push_constant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-	pipelineLayoutInfo.pushConstants.resize(1); pipelineLayoutInfo.pushConstants[0] = push_constant;
-	pipelineLayoutInfo.pushConstantNames.resize(1); pipelineLayoutInfo.pushConstantNames[0] = "Mesh Data";
+	Wireframe::Pipeline::PushConstant p;
+	p.offset = 0;
+	p.size = sizeof(Pong3D::Renderer::MeshPushConstants);
+	p.stage = Wireframe::Shader::Util::ShaderStage::Vertex;
+	p.name = "Mesh Data";
+	pipelineLayoutInfo.pushConstants.emplace_back(p);
 
 	//write layout to file
 
