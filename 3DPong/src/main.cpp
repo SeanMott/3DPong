@@ -25,9 +25,6 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 #include <BTDSTD/Wireframe/FrameBuffer.hpp>
 #include <BTDSTD/Wireframe/SyncObjects.hpp>
 
-//serilize
-#include <BTDSTD/Wireframe/Pipeline/ShaderSerilize.hpp>
-
 #include <TyGUI/WidgetRenderer.hpp>
 
 #include <Smok/Assets/Mesh.hpp>
@@ -55,10 +52,9 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 {
 	Wireframe::Device::GPU* GPU = &engine->GPU;
 
+	//loads a pipeline settings
 	Wireframe::Pipeline::PipelineSettings pipelineSettings;
-	pipelineSettings.SetPipelineSettingToDefault_All();
-
-	//wrtes the common settings to a settings file
+	Wireframe::Pipeline::Serilize::LoadPipelineSettingsDataFromFile(BTD::IO::FileInfo("pipelines/meshSettings." + Wireframe::Pipeline::Serilize::GetPipelineSettingExtentionStr()), pipelineSettings);
 
 	//sets the vertex layout
 	Wireframe::Pipeline::VertexInputDescription vertexDescription = Smok::Asset::Mesh::Vertex::GenerateVertexInputDescription();
@@ -66,46 +62,6 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	pipelineSettings._vertexInputInfo.vertexAttributeDescriptionCount = vertexDescription.attributes.size();
 	pipelineSettings._vertexInputInfo.pVertexBindingDescriptions = vertexDescription.bindings.data();
 	pipelineSettings._vertexInputInfo.vertexBindingDescriptionCount = vertexDescription.bindings.size();
-
-	//write vertex layout to file
-
-	//loads the shader settings and generates the shaders for the pipeline
-	/*
-	std::vector<Wireframe::Shader::Serilize::ShaderSettings> shaderSettings;
-	Wireframe::Shader::LoadShaderSettings_Development("shaders/Mesh.json", shaderSettings);
-	const size_t shaderCount = shaderSettings.size();
-	std::vector<Wireframe::Shader::ShaderModule> shaders; shaders.resize(shaderCount);
-	pipelineSettings._shaderStages.reserve(shaderCount);
-	for(size_t i = 0; i < shaderCount; ++i)
-	{
-		if(!shaders[i].Create(shaderSettings[i].binaryFilepath, GPU))
-		{
-			fmt::print("Wireframe Error: Shader || Create || Failed to create a shader from a binary file at \"{}\". Please make sure the path actually exists\n", shaderSettings[i].binaryFilepath);
-			continue;
-		}
-
-		pipelineSettings._shaderStages.emplace_back(Wireframe::Shader::GenerateShaderStageInfoForPipeline(shaders[i], shaderSettings[i].stage, shaderSettings[i].entryPointFuncName));
-	}
-	*/
-
-	//bulk writes vertex and fragment shaders
-	//Wireframe::Shader::Serilize::ShaderSerilizeData s1;
-	//s1.binaryFilepath = "shaders/Compiled/mesh.vert.spv";
-	//s1.entryPointFuncName = "main";
-	//s1.stage = Wireframe::Shader::Util::ShaderStage::Vertex;
-	//s1.name = "mesh_vertex";
-	//
-	//BTD::IO::FileInfo shaderSettings("shaders/" + s1.name + "." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr());
-	//Wireframe::Shader::Serilize::WriteShaderDataToFile(shaderSettings, s1, false);
-	//
-	//Wireframe::Shader::Serilize::ShaderSerilizeData s2;
-	//s2.binaryFilepath = "shaders/Compiled/mesh.frag.spv";
-	//s2.entryPointFuncName = "main";
-	//s2.stage = Wireframe::Shader::Util::ShaderStage::Fragment;
-	//s2.name = "mesh_fragment";
-	//
-	//shaderSettings = BTD::IO::FileInfo("shaders/" + s2.name + "." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr());
-	//Wireframe::Shader::Serilize::WriteShaderDataToFile(shaderSettings, s2, false);
 
 	//loads the shaders
 	Wireframe::Shader::ShaderModule meshVertShader;
@@ -126,16 +82,18 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	//generates a layout and the push constants
 	Wireframe::Pipeline::PipelineLayout_CreateInfo pipelineLayoutInfo;
 	Wireframe::Pipeline::PushConstant p;
-	p.offset = 0;
+	Wireframe::Pipeline::Serilize::LoadPipelineLayoutPushConstantDataFromFile(BTD::IO::FileInfo("pipelines/meshPushConstant." + Wireframe::Pipeline::PushConstant::GetExtentionStr()),
+		p);
 	p.size = sizeof(Pong3D::Renderer::MeshPushConstants);
-	p.stage = Wireframe::Shader::Util::ShaderStage::Vertex;
-	p.name = "Mesh Data";
 	pipelineLayoutInfo.pushConstants.emplace_back(p);
-
-	//write layout to file
 
 	meshPipelineLayout.Create(pipelineLayoutInfo, GPU);
 	meshPipeline.Create(pipelineSettings, meshPipelineLayout, renderpass._renderPass, GPU);
+
+	//wrote a whole pipeline load out file || describes settings, shaders, and push constants
+	/*
+	
+	*/
 
 	meshFragShader.Destroy(GPU);
 	meshVertShader.Destroy(GPU);
