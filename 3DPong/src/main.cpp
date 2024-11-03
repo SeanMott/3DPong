@@ -48,13 +48,15 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 
 void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wireframe::Pipeline::GraphicsPipeline& meshPipeline,
 	Wireframe::Renderpass::Renderpass& renderpass,
-	Pong3D::Core::Engine* engine)
+	Pong3D::Core::Engine* engine,
+	const BTD::IO::FileInfo& meshPipelineSettingsFP, const BTD::IO::FileInfo& meshPipelinePushConstantSettingsFP,
+	const BTD::IO::FileInfo& meshVertexShaderSettingsFP, const BTD::IO::FileInfo& meshFragmentShaderSettingsFP)
 {
 	Wireframe::Device::GPU* GPU = &engine->GPU;
 
 	//loads a pipeline settings
 	Wireframe::Pipeline::PipelineSettings pipelineSettings;
-	Wireframe::Pipeline::Serilize::LoadPipelineSettingsDataFromFile(BTD::IO::FileInfo("pipelines/meshSettings." + Wireframe::Pipeline::Serilize::GetPipelineSettingExtentionStr()), pipelineSettings);
+	Wireframe::Pipeline::Serilize::LoadPipelineSettingsDataFromFile(meshPipelineSettingsFP, pipelineSettings);
 
 	//sets the vertex layout
 	Wireframe::Pipeline::VertexInputDescription vertexDescription = Smok::Asset::Mesh::Vertex::GenerateVertexInputDescription();
@@ -66,13 +68,13 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	//loads the shaders
 	Wireframe::Shader::ShaderModule meshVertShader;
 	Wireframe::Shader::Serilize::ShaderSerilizeData vertex;
-	Wireframe::Shader::Serilize::LoadShaderDataFromFile(BTD::IO::FileInfo("shaders/mesh_vertex." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr()),
+	Wireframe::Shader::Serilize::LoadShaderDataFromFile(meshVertexShaderSettingsFP,
 		vertex, false);
 	if (!meshVertShader.Create(vertex.binaryFilepath.c_str(), GPU)) {}
 	
 	Wireframe::Shader::ShaderModule meshFragShader;
 	Wireframe::Shader::Serilize::ShaderSerilizeData fragment;
-	Wireframe::Shader::Serilize::LoadShaderDataFromFile(BTD::IO::FileInfo("shaders/mesh_fragment." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr()),
+	Wireframe::Shader::Serilize::LoadShaderDataFromFile(meshFragmentShaderSettingsFP,
 		fragment, false);
 	if (!meshFragShader.Create(fragment.binaryFilepath.c_str(), GPU)) {}
 	
@@ -82,7 +84,7 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	//generates a layout and the push constants
 	Wireframe::Pipeline::PipelineLayout_CreateInfo pipelineLayoutInfo;
 	Wireframe::Pipeline::PushConstant p;
-	Wireframe::Pipeline::Serilize::LoadPipelineLayoutPushConstantDataFromFile(BTD::IO::FileInfo("pipelines/meshPushConstant." + Wireframe::Pipeline::PushConstant::GetExtentionStr()),
+	Wireframe::Pipeline::Serilize::LoadPipelineLayoutPushConstantDataFromFile(meshPipelinePushConstantSettingsFP,
 		p);
 	p.size = sizeof(Pong3D::Renderer::MeshPushConstants);
 	pipelineLayoutInfo.pushConstants.emplace_back(p);
@@ -90,22 +92,119 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	meshPipelineLayout.Create(pipelineLayoutInfo, GPU);
 	meshPipeline.Create(pipelineSettings, meshPipelineLayout, renderpass._renderPass, GPU);
 
-	//wrote a whole pipeline load out file || describes settings, shaders, and push constants
-	/*
-	
-	*/
-
 	meshFragShader.Destroy(GPU);
 	meshVertShader.Destroy(GPU);
 }
 
-void load_meshes(Smok::Asset::Mesh::StaticMesh& mesh, VmaAllocator& allocator)
+void load_meshes(Smok::Asset::Mesh::StaticMesh& mesh, VmaAllocator& allocator, const BTD::IO::FileInfo& staticMeshFP)
 {
-	//load the Kirby model
-	Smok::AssetConvertionTool::Mesh::ConvertStaticMesh("assets/acoustic_guitar.obj", mesh);
+	//load the raw model
+	Smok::AssetConvertionTool::Mesh::ConvertStaticMesh(staticMeshFP.GetPathStr().c_str(), mesh);
+	
+	//writes to disc
+	
+	//generate vertex and index buffers
+	mesh.CreateVertexBuffers(allocator);
 	for (size_t i = 0; i < mesh.meshes.size(); ++i)
-		mesh.meshes[i].CreateVertexAndIndexBuffers(allocator);
+		mesh.meshes[i].CreateIndexBuffers(allocator);
 }
+
+//defines the types of assets
+enum class AssetType
+{
+	GraphicsPipeline = 0,
+	PipelineLayout,
+
+	StaticMesh,
+
+	Count
+};
+
+//defines a asset for a pipline layout
+struct Asset_PipelineLayout
+{
+	uint64_t ID = 0; //the ID
+
+	BTD::IO::FileInfo pushConstantDataSettingFile;
+
+	Wireframe::Pipeline::PipelineLayout asset; //the asset
+};
+
+//defines a asset for a graphics pipeline
+struct Asset_GraphicsPipeline
+{
+	uint64_t ID = 0; //the ID
+
+	BTD::IO::FileInfo pipelineDataSettingFile;
+	BTD::IO::FileInfo vertexShaderDataSettingFile;
+	BTD::IO::FileInfo fragmentShaderDataSettingFile;
+
+	Wireframe::Pipeline::GraphicsPipeline asset; //the asset
+};
+
+//defines a asset for a static mesh
+
+//defines a asset manager
+struct AssetManager
+{
+	BTD::Map::IDStringRegistery assetNameRegistery;
+	std::unordered_map<uint64_t, Asset_PipelineLayout> pipelineLayouts;
+	std::unordered_map<uint64_t, Asset_GraphicsPipeline> pipelines;
+	std::unordered_map<uint64_t, Smok::Asset::Mesh::StaticMesh> staticMeshes;
+
+	//inits the assets
+
+	//destroys all assets
+	inline void Destroy(Pong3D::Core::Engine* engine)
+	{
+		for (auto& m : staticMeshes)
+		{
+			for (size_t i = 0; i < m.second.meshes.size(); ++i)
+				m.second.meshes[i].DestroyIndexBuffers(engine->_allocator);
+			m.second.DestroyVertexBuffers(engine->_allocator);
+		}
+
+		for (auto& p : pipelines)
+			p.second.asset.Destroy(&engine->GPU);
+
+		for (auto& l : pipelineLayouts)
+			l.second.asset.Destroy(&engine->GPU);
+	}
+
+	//registers a graphics pipeline
+	inline uint64_t RegisterAsset_GraphicsPipeline(const std::string& name, const BTD::IO::FileInfo& pipelineDataSettingFile,
+		const BTD::IO::FileInfo& vertexShaderDataSettingFile, const BTD::IO::FileInfo& fragmentShaderDataSettingFile)
+	{
+		uint64_t ID = assetNameRegistery.GenerateID(name);
+		
+		pipelines[ID] = Asset_GraphicsPipeline();
+		pipelines[ID].ID = ID;
+		pipelines[ID].pipelineDataSettingFile = pipelineDataSettingFile;
+		pipelines[ID].vertexShaderDataSettingFile = vertexShaderDataSettingFile;
+		pipelines[ID].fragmentShaderDataSettingFile = fragmentShaderDataSettingFile;
+		pipelines[ID].asset = Wireframe::Pipeline::GraphicsPipeline();
+		return ID;
+	}
+
+	//registers a pipeline layout
+	inline uint64_t RegisterAsset_PipelineLayout(const std::string& name, const BTD::IO::FileInfo& pushConstantDataSettingFile)
+	{
+		uint64_t ID = assetNameRegistery.GenerateID(name);
+		pipelineLayouts[ID] = Asset_PipelineLayout();
+		pipelineLayouts[ID].ID = ID;
+		pipelineLayouts[ID].pushConstantDataSettingFile = pushConstantDataSettingFile;
+		pipelineLayouts[ID].asset = Wireframe::Pipeline::PipelineLayout();
+		return ID;
+	}
+
+	//registers a static mesh
+	inline uint64_t RegisterAsset_StaticMesh(const std::string& name)
+	{
+		uint64_t ID = assetNameRegistery.GenerateID(name);
+		staticMeshes[ID] = Smok::Asset::Mesh::StaticMesh();
+		return ID;
+	}
+};
 
 //entry point
 int main()
@@ -127,22 +226,27 @@ int main()
 	renderManager.Init(&engine);
 	renderManager.TyGUI_Init();
 
-	//stores the assets
-	BTD::Map::IDStringRegistery assetNameRegistery;
-	uint64_t meshPipelineAssetID = assetNameRegistery.GenerateID("meshPipeline_Default"),
-		meshPipelineLayoutAssetID = assetNameRegistery.GenerateID("meshPipelineLayout_Default"),
-		staticMeshAssetID = assetNameRegistery.GenerateID("staticMesh_Default");
+	//registers assets
+	AssetManager AM;
+	uint64_t meshPipelineAssetID = AM.RegisterAsset_GraphicsPipeline("meshPipeline_Default",
+		BTD::IO::FileInfo("Pipelines/meshSettings." + Wireframe::Pipeline::Serilize::GetPipelineSettingExtentionStr()),
+		BTD::IO::FileInfo("shaders/mesh_vertex." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr()),
+		BTD::IO::FileInfo("shaders/mesh_fragment." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr())),
+		
+		meshPipelineLayoutAssetID = AM.RegisterAsset_PipelineLayout("meshPipelineLayout_Default",
+			BTD::IO::FileInfo("Pipelines/meshPushConstant." + Wireframe::Pipeline::PushConstant::GetExtentionStr())),
+		
+		staticMeshAssetID = AM.RegisterAsset_StaticMesh("staticMesh_Default");
 
-	std::unordered_map<uint64_t, Wireframe::Pipeline::PipelineLayout> pipelineLayouts;
-	std::unordered_map<uint64_t, Wireframe::Pipeline::GraphicsPipeline> pipelines;
-	std::unordered_map<uint64_t, Smok::Asset::Mesh::StaticMesh> staticMeshes;
+	//loads the basic pipeline
+	init_pipelines(AM.pipelineLayouts[meshPipelineLayoutAssetID].asset, AM.pipelines[meshPipelineAssetID].asset, renderManager.renderpass, &engine,
+		AM.pipelines[meshPipelineAssetID].pipelineDataSettingFile,
+		AM.pipelineLayouts[meshPipelineLayoutAssetID].pushConstantDataSettingFile,
+		AM.pipelines[meshPipelineAssetID].vertexShaderDataSettingFile,
+		AM.pipelines[meshPipelineAssetID].fragmentShaderDataSettingFile);
 
-	//loads assets
-	pipelineLayouts[meshPipelineLayoutAssetID] = Wireframe::Pipeline::PipelineLayout();
-	pipelines[meshPipelineAssetID] = Wireframe::Pipeline::GraphicsPipeline();
-	staticMeshes[staticMeshAssetID] = Smok::Asset::Mesh::StaticMesh();
-	init_pipelines(pipelineLayouts[meshPipelineLayoutAssetID], pipelines[meshPipelineAssetID], renderManager.renderpass, &engine);
-	load_meshes(staticMeshes[staticMeshAssetID], engine._allocator);
+	//loads meshes
+	load_meshes(AM.staticMeshes[staticMeshAssetID], engine._allocator, BTD::IO::FileInfo("assets/acoustic_guitar.obj"));
 
 	//generates the mega mesh buffer of all index data
 
@@ -173,7 +277,7 @@ int main()
 	{
 		transform = *BTD::ECS::getComponent<Smok::ECS::Comp::Transform>(comps[i]);
 		Smok::ECS::Comp::MeshRender mr = *BTD::ECS::getComponent<Smok::ECS::Comp::MeshRender>(comps[i]);
-		batch->AddStaticMesh(&pipelineLayouts[mr.pipelineLayoutID], &pipelines[mr.pipelineID], &staticMeshes[mr.staticMeshID], transform);
+		batch->AddStaticMesh(&AM.pipelineLayouts[mr.pipelineLayoutID].asset, &AM.pipelines[mr.pipelineID].asset, &AM.staticMeshes[mr.staticMeshID], transform);
 	}
 
 	//gets the main camera
@@ -298,19 +402,7 @@ int main()
 	vkDeviceWaitIdle(engine.GPU.device); //make sure the gpu has stopped doing its things
 
 	//--clean up
-
-	for (auto& m : staticMeshes)
-	{
-		for (size_t i = 0; i < m.second.meshes.size(); ++i)
-			m.second.meshes[i].DestroyVertexAndIndexBuffers(engine._allocator);
-	}
-
-	for (auto& p : pipelines)
-		p.second.Destroy(&engine.GPU);
-
-	for (auto& l : pipelineLayouts)
-		l.second.Destroy(&engine.GPU);
-
+	AM.Destroy(&engine);
 	renderManager.Shutdown();
 	engine.Shutdown();
 

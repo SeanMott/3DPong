@@ -133,9 +133,9 @@ namespace Pong3D::Renderer
 				pipelineLayouts[renderOperations_staticMesh[i].meshPipelineLayoutIndex]->UpdatePushConstant_Vertex(cmd, "Mesh Data", &data);
 
 				//binds and draws meshes
+				staticMeshes[i]->vertexBuffer.Bind(cmd);
 				for (size_t m = 0; m < staticMeshes[renderOperations_staticMesh[i].meshIndex]->meshes.size(); ++m)
 				{
-					staticMeshes[i]->meshes[m].vertexBuffer.Bind(cmd);
 					staticMeshes[i]->meshes[m].indexBuffer.Bind(cmd);
 					staticMeshes[i]->meshes[m].indexBuffer.Draw(cmd, 1, 0);
 				}
