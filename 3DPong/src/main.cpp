@@ -27,6 +27,7 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 
 #include <TyGUI/WidgetRenderer.hpp>
 
+#include <Smok/Assets/AssetManager.hpp>
 #include <Smok/Assets/Mesh.hpp>
 
 #include <Smok/Components/Transform.hpp>
@@ -109,103 +110,6 @@ void load_meshes(Smok::Asset::Mesh::StaticMesh& mesh, VmaAllocator& allocator, c
 		mesh.meshes[i].CreateIndexBuffers(allocator);
 }
 
-//defines the types of assets
-enum class AssetType
-{
-	GraphicsPipeline = 0,
-	PipelineLayout,
-
-	StaticMesh,
-
-	Count
-};
-
-//defines a asset for a pipline layout
-struct Asset_PipelineLayout
-{
-	uint64_t ID = 0; //the ID
-
-	BTD::IO::FileInfo pushConstantDataSettingFile;
-
-	Wireframe::Pipeline::PipelineLayout asset; //the asset
-};
-
-//defines a asset for a graphics pipeline
-struct Asset_GraphicsPipeline
-{
-	uint64_t ID = 0; //the ID
-
-	BTD::IO::FileInfo pipelineDataSettingFile;
-	BTD::IO::FileInfo vertexShaderDataSettingFile;
-	BTD::IO::FileInfo fragmentShaderDataSettingFile;
-
-	Wireframe::Pipeline::GraphicsPipeline asset; //the asset
-};
-
-//defines a asset for a static mesh
-
-//defines a asset manager
-struct AssetManager
-{
-	BTD::Map::IDStringRegistery assetNameRegistery;
-	std::unordered_map<uint64_t, Asset_PipelineLayout> pipelineLayouts;
-	std::unordered_map<uint64_t, Asset_GraphicsPipeline> pipelines;
-	std::unordered_map<uint64_t, Smok::Asset::Mesh::StaticMesh> staticMeshes;
-
-	//inits the assets
-
-	//destroys all assets
-	inline void Destroy(Pong3D::Core::Engine* engine)
-	{
-		for (auto& m : staticMeshes)
-		{
-			for (size_t i = 0; i < m.second.meshes.size(); ++i)
-				m.second.meshes[i].DestroyIndexBuffers(engine->_allocator);
-			m.second.DestroyVertexBuffers(engine->_allocator);
-		}
-
-		for (auto& p : pipelines)
-			p.second.asset.Destroy(&engine->GPU);
-
-		for (auto& l : pipelineLayouts)
-			l.second.asset.Destroy(&engine->GPU);
-	}
-
-	//registers a graphics pipeline
-	inline uint64_t RegisterAsset_GraphicsPipeline(const std::string& name, const BTD::IO::FileInfo& pipelineDataSettingFile,
-		const BTD::IO::FileInfo& vertexShaderDataSettingFile, const BTD::IO::FileInfo& fragmentShaderDataSettingFile)
-	{
-		uint64_t ID = assetNameRegistery.GenerateID(name);
-		
-		pipelines[ID] = Asset_GraphicsPipeline();
-		pipelines[ID].ID = ID;
-		pipelines[ID].pipelineDataSettingFile = pipelineDataSettingFile;
-		pipelines[ID].vertexShaderDataSettingFile = vertexShaderDataSettingFile;
-		pipelines[ID].fragmentShaderDataSettingFile = fragmentShaderDataSettingFile;
-		pipelines[ID].asset = Wireframe::Pipeline::GraphicsPipeline();
-		return ID;
-	}
-
-	//registers a pipeline layout
-	inline uint64_t RegisterAsset_PipelineLayout(const std::string& name, const BTD::IO::FileInfo& pushConstantDataSettingFile)
-	{
-		uint64_t ID = assetNameRegistery.GenerateID(name);
-		pipelineLayouts[ID] = Asset_PipelineLayout();
-		pipelineLayouts[ID].ID = ID;
-		pipelineLayouts[ID].pushConstantDataSettingFile = pushConstantDataSettingFile;
-		pipelineLayouts[ID].asset = Wireframe::Pipeline::PipelineLayout();
-		return ID;
-	}
-
-	//registers a static mesh
-	inline uint64_t RegisterAsset_StaticMesh(const std::string& name)
-	{
-		uint64_t ID = assetNameRegistery.GenerateID(name);
-		staticMeshes[ID] = Smok::Asset::Mesh::StaticMesh();
-		return ID;
-	}
-};
-
 //entry point
 int main()
 {
@@ -227,7 +131,7 @@ int main()
 	renderManager.TyGUI_Init();
 
 	//registers assets
-	AssetManager AM;
+	Smok::Asset::AssetManager::AssetManager AM;
 	uint64_t meshPipelineAssetID = AM.RegisterAsset_GraphicsPipeline("meshPipeline_Default",
 		BTD::IO::FileInfo("Pipelines/meshSettings." + Wireframe::Pipeline::Serilize::GetPipelineSettingExtentionStr()),
 		BTD::IO::FileInfo("shaders/mesh_vertex." + Wireframe::Shader::Serilize::ShaderSerilizeData::GetExtentionStr()),
@@ -236,7 +140,9 @@ int main()
 		meshPipelineLayoutAssetID = AM.RegisterAsset_PipelineLayout("meshPipelineLayout_Default",
 			BTD::IO::FileInfo("Pipelines/meshPushConstant." + Wireframe::Pipeline::PushConstant::GetExtentionStr())),
 		
-		staticMeshAssetID = AM.RegisterAsset_StaticMesh("staticMesh_Default");
+		staticMeshAssetID = AM.RegisterAsset_StaticMesh("staticMesh_Default",
+			BTD::IO::FileInfo("assets/Guitar." + Smok::Asset::Mesh::Serilize::GetSmeshDeclFileExtensionStr()),
+			BTD::IO::FileInfo("assets/Guitar." + Smok::Asset::Mesh::Serilize::GetSmeshBinaryFileExtensionStr()));
 
 	//loads the basic pipeline
 	init_pipelines(AM.pipelineLayouts[meshPipelineLayoutAssetID].asset, AM.pipelines[meshPipelineAssetID].asset, renderManager.renderpass, &engine,
@@ -245,10 +151,10 @@ int main()
 		AM.pipelines[meshPipelineAssetID].vertexShaderDataSettingFile,
 		AM.pipelines[meshPipelineAssetID].fragmentShaderDataSettingFile);
 
-	//loads meshes
-	load_meshes(AM.staticMeshes[staticMeshAssetID], engine._allocator, BTD::IO::FileInfo("assets/acoustic_guitar.obj"));
+	//load static mesh
+	AM.staticMeshes[staticMeshAssetID].LoadMesh();
+	AM.staticMeshes[staticMeshAssetID].InitalizeMesh(engine._allocator);
 
-	//generates the mega mesh buffer of all index data
 
 	//----scene
 	Pong3D::Scene::Scene scene;
@@ -277,7 +183,8 @@ int main()
 	{
 		transform = *BTD::ECS::getComponent<Smok::ECS::Comp::Transform>(comps[i]);
 		Smok::ECS::Comp::MeshRender mr = *BTD::ECS::getComponent<Smok::ECS::Comp::MeshRender>(comps[i]);
-		batch->AddStaticMesh(&AM.pipelineLayouts[mr.pipelineLayoutID].asset, &AM.pipelines[mr.pipelineID].asset, &AM.staticMeshes[mr.staticMeshID], transform);
+		batch->AddStaticMesh(&AM.pipelineLayouts[mr.pipelineLayoutID].asset, &AM.pipelines[mr.pipelineID].asset,
+			&AM.staticMeshes[mr.staticMeshID].asset);
 	}
 
 	//gets the main camera
@@ -402,7 +309,7 @@ int main()
 	vkDeviceWaitIdle(engine.GPU.device); //make sure the gpu has stopped doing its things
 
 	//--clean up
-	AM.Destroy(&engine);
+	AM.Destroy(engine._allocator, &engine.GPU);
 	renderManager.Shutdown();
 	engine.Shutdown();
 
