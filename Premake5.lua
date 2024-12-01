@@ -11,7 +11,6 @@ configurations
 
 include "BTDSTD3"
 include "TyGUI"
-include "SmokACT"
 include "Smok"
 
 ---The game
@@ -52,17 +51,13 @@ VULKAN_SDK_MANUAL_OVERRIDE,
 "TyGUI/includes",
 "TyGUI/" .. IMGUI_INCLUDE,
 
---"C:/GameDev/SurvivalBasic/Smok/includes",
 "Smok/includes",
-
---"C:/GameDev/SurvivalBasic/SmokACT/includes",
-"SmokACT/includes",
 }
 
 links
 {
 "TyGUI",
-"SmokACT"
+"Smok"
 }
 
 

@@ -36,8 +36,6 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 
 #include <Smok/Memory/LifetimeDeleteQueue.hpp>
 
-#include <SmokACT/ImportMesh.hpp>
-
 #include <SDL_events.h>
 
 #include <glm/vec3.hpp>
@@ -47,17 +45,16 @@ Test rendering project Pong remade in 3D with the new Bytes The Dust Standard Li
 #include <thread>
 #include <vector>
 
-void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wireframe::Pipeline::GraphicsPipeline& meshPipeline,
+void init_pipelines(
+	Smok::Asset::AssetManager::Asset_PipelineLayout& pipelineLayout, Smok::Asset::AssetManager::Asset_GraphicsPipeline& pipeline,
 	Wireframe::Renderpass::Renderpass& renderpass,
-	Pong3D::Core::Engine* engine,
-	const BTD::IO::FileInfo& meshPipelineSettingsFP, const BTD::IO::FileInfo& meshPipelinePushConstantSettingsFP,
-	const BTD::IO::FileInfo& meshVertexShaderSettingsFP, const BTD::IO::FileInfo& meshFragmentShaderSettingsFP)
+	Pong3D::Core::Engine* engine)
 {
 	Wireframe::Device::GPU* GPU = &engine->GPU;
 
 	//loads a pipeline settings
 	Wireframe::Pipeline::PipelineSettings pipelineSettings;
-	Wireframe::Pipeline::Serilize::LoadPipelineSettingsDataFromFile(meshPipelineSettingsFP, pipelineSettings);
+	Wireframe::Pipeline::Serilize::LoadPipelineSettingsDataFromFile(pipeline.pipelineDataSettingFile, pipelineSettings);
 
 	//sets the vertex layout
 	Wireframe::Pipeline::VertexInputDescription vertexDescription = Smok::Asset::Mesh::Vertex::GenerateVertexInputDescription();
@@ -69,13 +66,13 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	//loads the shaders
 	Wireframe::Shader::ShaderModule meshVertShader;
 	Wireframe::Shader::Serilize::ShaderSerilizeData vertex;
-	Wireframe::Shader::Serilize::LoadShaderDataFromFile(meshVertexShaderSettingsFP,
+	Wireframe::Shader::Serilize::LoadShaderDataFromFile(pipeline.vertexShaderDataSettingFile,
 		vertex, false);
 	if (!meshVertShader.Create(vertex.binaryFilepath.c_str(), GPU)) {}
 	
 	Wireframe::Shader::ShaderModule meshFragShader;
 	Wireframe::Shader::Serilize::ShaderSerilizeData fragment;
-	Wireframe::Shader::Serilize::LoadShaderDataFromFile(meshFragmentShaderSettingsFP,
+	Wireframe::Shader::Serilize::LoadShaderDataFromFile(pipeline.fragmentShaderDataSettingFile,
 		fragment, false);
 	if (!meshFragShader.Create(fragment.binaryFilepath.c_str(), GPU)) {}
 	
@@ -85,30 +82,30 @@ void init_pipelines(Wireframe::Pipeline::PipelineLayout& meshPipelineLayout, Wir
 	//generates a layout and the push constants
 	Wireframe::Pipeline::PipelineLayout_CreateInfo pipelineLayoutInfo;
 	Wireframe::Pipeline::PushConstant p;
-	Wireframe::Pipeline::Serilize::LoadPipelineLayoutPushConstantDataFromFile(meshPipelinePushConstantSettingsFP,
+	Wireframe::Pipeline::Serilize::LoadPipelineLayoutPushConstantDataFromFile(pipelineLayout.pushConstantDataSettingFile,
 		p);
 	p.size = sizeof(Pong3D::Renderer::MeshPushConstants);
 	pipelineLayoutInfo.pushConstants.emplace_back(p);
 
-	meshPipelineLayout.Create(pipelineLayoutInfo, GPU);
-	meshPipeline.Create(pipelineSettings, meshPipelineLayout, renderpass._renderPass, GPU);
+	pipelineLayout.asset.Create(pipelineLayoutInfo, GPU);
+	pipelineLayout.assetIsCreated = true;
+	pipeline.asset.Create(pipelineSettings, pipelineLayout.asset, renderpass._renderPass, GPU);
+	pipeline.assetIsCreated = true;
 
 	meshFragShader.Destroy(GPU);
 	meshVertShader.Destroy(GPU);
 }
 
-void load_meshes(Smok::Asset::Mesh::StaticMesh& mesh, VmaAllocator& allocator, const BTD::IO::FileInfo& staticMeshFP)
+//defines a input compoent for Pong Bars
+struct PlayerInputComponent : public BTD::ECS::Comp::IComponent
 {
-	//load the raw model
-	Smok::AssetConvertionTool::Mesh::ConvertStaticMesh(staticMeshFP.GetPathStr().c_str(), mesh);
-	
-	//writes to disc
-	
-	//generate vertex and index buffers
-	mesh.CreateVertexBuffers(allocator);
-	for (size_t i = 0; i < mesh.meshes.size(); ++i)
-		mesh.meshes[i].CreateIndexBuffers(allocator);
-}
+	//the up and down key
+	SDL_Scancode upKey = SDL_SCANCODE_W, downKey = SDL_SCANCODE_S;
+};
+
+//defines a editor camera input component, used in debug
+
+//defines a network component
 
 //entry point
 int main()
@@ -145,16 +142,11 @@ int main()
 			BTD::IO::FileInfo("assets/Guitar." + Smok::Asset::Mesh::Serilize::GetSmeshBinaryFileExtensionStr()));
 
 	//loads the basic pipeline
-	init_pipelines(AM.pipelineLayouts[meshPipelineLayoutAssetID].asset, AM.pipelines[meshPipelineAssetID].asset, renderManager.renderpass, &engine,
-		AM.pipelines[meshPipelineAssetID].pipelineDataSettingFile,
-		AM.pipelineLayouts[meshPipelineLayoutAssetID].pushConstantDataSettingFile,
-		AM.pipelines[meshPipelineAssetID].vertexShaderDataSettingFile,
-		AM.pipelines[meshPipelineAssetID].fragmentShaderDataSettingFile);
+	init_pipelines(AM.pipelineLayouts[meshPipelineLayoutAssetID], AM.pipelines[meshPipelineAssetID], renderManager.renderpass, &engine);
 
 	//load static mesh
 	AM.staticMeshes[staticMeshAssetID].LoadMesh();
 	AM.staticMeshes[staticMeshAssetID].InitalizeMesh(engine._allocator);
-
 
 	//----scene
 	Pong3D::Scene::Scene scene;
@@ -164,7 +156,7 @@ int main()
 	transform.position = { 0.f, 0.f, -10.f };
 	Pong3D::Scene::Entity camera = scene.Camera_Create("Main Camera", transform, cameraSettings, &engine);
 
-	//entity
+	//entity paddle P1
 	Smok::ECS::Comp::MeshRender entity_meshRenderComp;
 	entity_meshRenderComp.pipelineID = meshPipelineAssetID;
 	entity_meshRenderComp.pipelineLayoutID = meshPipelineLayoutAssetID;
@@ -172,7 +164,17 @@ int main()
 
 	transform.position = { 0.0f, 0.0f, 7.0f };
 
-	Pong3D::Scene::Entity kirby = scene.Rider_Create("Kirby", transform, entity_meshRenderComp, &engine);
+	scene.CreateEntity_Paddle("Paddle 1", transform, entity_meshRenderComp, &engine);
+
+	//entity paddle P2
+	entity_meshRenderComp = Smok::ECS::Comp::MeshRender();
+	entity_meshRenderComp.pipelineID = meshPipelineAssetID;
+	entity_meshRenderComp.pipelineLayoutID = meshPipelineLayoutAssetID;
+	entity_meshRenderComp.staticMeshID = staticMeshAssetID;
+
+	transform.position = { 0.0f, 5.0f, 7.0f };
+
+	scene.CreateEntity_Paddle("Paddle 2", transform, entity_meshRenderComp, &engine);
 
 	//goes through the scene and generate the render operations
 	std::deque<Pong3D::Renderer::RenderOperationBatch> renderOperationBatchs;
@@ -184,7 +186,7 @@ int main()
 		transform = *BTD::ECS::getComponent<Smok::ECS::Comp::Transform>(comps[i]);
 		Smok::ECS::Comp::MeshRender mr = *BTD::ECS::getComponent<Smok::ECS::Comp::MeshRender>(comps[i]);
 		batch->AddStaticMesh(&AM.pipelineLayouts[mr.pipelineLayoutID].asset, &AM.pipelines[mr.pipelineID].asset,
-			&AM.staticMeshes[mr.staticMeshID].asset);
+			&AM.staticMeshes[mr.staticMeshID].asset, transform);
 	}
 
 	//gets the main camera
@@ -200,8 +202,6 @@ int main()
 	while (window->isRunning)
 	{
 		//--cal deltas
-		//BTD::Time::Time::CalDeltaTime();
-		//BTD::Time::Time::CalFixedDeltaTime();
 		time.Update();
 
 		//--input
@@ -240,6 +240,8 @@ int main()
 		}
 
 		keyInputData.UpdateInputData();
+
+		//gets all input components and their trans components
 
 		//input for moving the camera
 		if (keyInputData.IsKeyHeld(SDL_SCANCODE_W))

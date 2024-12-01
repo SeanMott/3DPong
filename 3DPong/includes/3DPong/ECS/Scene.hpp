@@ -12,15 +12,13 @@
 namespace Pong3D::Scene
 {
 	//defines a flag for differant entity types
-	enum class EntityFlag
+	enum class EntityFlag : uint8_t
 	{
-		Camera = 0, //defines a camera
+		Camera = 0x00, //defines a camera
 
-		Rider, //defines a Rider
+		Paddle, //defines a paddle bar, the thing the player controls
 
-		Item, //defines a Item
-
-		Envirment, //defines the envirment
+		Ball, //defines a ball
 
 		Count
 	};
@@ -71,13 +69,13 @@ namespace Pong3D::Scene
 
 		//gets the main camera
 
-		//creates a Rider
-		inline Entity Rider_Create(const std::string& name, const Smok::ECS::Comp::Transform& transform, const Smok::ECS::Comp::MeshRender& meshRenderer, Core::Engine* engine)
+		//creates a renderable entity paddle
+		inline Entity CreateEntity_Paddle(const std::string& name, const Smok::ECS::Comp::Transform& transform, const Smok::ECS::Comp::MeshRender& meshRenderer, Core::Engine* engine)
 		{
 			//creates ID
 			Entity rider;
 			rider.ID = registery.GenerateID(name);
-			rider.flag = EntityFlag::Rider;
+			rider.flag = EntityFlag::Paddle;
 
 			//creates components
 			BTD::ECS::addComponent(rider.ID, transform);

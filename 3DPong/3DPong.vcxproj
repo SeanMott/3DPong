@@ -81,7 +81,7 @@
       <WarningLevel>Level3</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PreprocessorDefinitions>GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_FORCE_RADIANS;GLM_ENABLE_EXPERIMENTAL;Window_Build;VK_USE_PLATFORM_WIN32_KHR;Desktop_Build;BTD_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>includes;..\BTDSTD3\includes;..\BTDSTD3\Venders\GLM;..\BTDSTD3\Venders\FMT\include;..\BTDSTD3\Venders\SDL\include;..\BTDSTD3\Venders\VKBootstrap\src;..\BTDSTD3\Venders\STB;..\BTDSTD3\Venders\Volk;..\BTDSTD3\Venders\VMA\include;C:\VulkanSDK\1.3.296.0\Include;..\TyGUI\includes;..\TyGUI\Venders\ImGUI;..\Smok\includes;..\SmokACT\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>includes;..\BTDSTD3\includes;..\BTDSTD3\Venders\GLM;..\BTDSTD3\Venders\FMT\include;..\BTDSTD3\Venders\SDL\include;..\BTDSTD3\Venders\VKBootstrap\src;..\BTDSTD3\Venders\STB;..\BTDSTD3\Venders\Volk;..\BTDSTD3\Venders\VMA\include;C:\VulkanSDK\1.3.296.0\Include;..\TyGUI\includes;..\TyGUI\Venders\ImGUI;..\Smok\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <Optimization>Disabled</Optimization>
       <MinimalRebuild>false</MinimalRebuild>
@@ -102,7 +102,7 @@
       <WarningLevel>Level3</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PreprocessorDefinitions>GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_FORCE_RADIANS;GLM_ENABLE_EXPERIMENTAL;Window_Build;VK_USE_PLATFORM_WIN32_KHR;Desktop_Build;BTD_RELEASE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>includes;..\BTDSTD3\includes;..\BTDSTD3\Venders\GLM;..\BTDSTD3\Venders\FMT\include;..\BTDSTD3\Venders\SDL\include;..\BTDSTD3\Venders\VKBootstrap\src;..\BTDSTD3\Venders\STB;..\BTDSTD3\Venders\Volk;..\BTDSTD3\Venders\VMA\include;C:\VulkanSDK\1.3.296.0\Include;..\TyGUI\includes;..\TyGUI\Venders\ImGUI;..\Smok\includes;..\SmokACT\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>includes;..\BTDSTD3\includes;..\BTDSTD3\Venders\GLM;..\BTDSTD3\Venders\FMT\include;..\BTDSTD3\Venders\SDL\include;..\BTDSTD3\Venders\VKBootstrap\src;..\BTDSTD3\Venders\STB;..\BTDSTD3\Venders\Volk;..\BTDSTD3\Venders\VMA\include;C:\VulkanSDK\1.3.296.0\Include;..\TyGUI\includes;..\TyGUI\Venders\ImGUI;..\Smok\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -126,7 +126,7 @@
       <WarningLevel>Level3</WarningLevel>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <PreprocessorDefinitions>GLM_FORCE_DEPTH_ZERO_TO_ONE;GLM_FORCE_RADIANS;GLM_ENABLE_EXPERIMENTAL;Window_Build;VK_USE_PLATFORM_WIN32_KHR;Desktop_Build;BTD_DIST;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>includes;..\BTDSTD3\includes;..\BTDSTD3\Venders\GLM;..\BTDSTD3\Venders\FMT\include;..\BTDSTD3\Venders\SDL\include;..\BTDSTD3\Venders\VKBootstrap\src;..\BTDSTD3\Venders\STB;..\BTDSTD3\Venders\Volk;..\BTDSTD3\Venders\VMA\include;C:\VulkanSDK\1.3.296.0\Include;..\TyGUI\includes;..\TyGUI\Venders\ImGUI;..\Smok\includes;..\SmokACT\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>includes;..\BTDSTD3\includes;..\BTDSTD3\Venders\GLM;..\BTDSTD3\Venders\FMT\include;..\BTDSTD3\Venders\SDL\include;..\BTDSTD3\Venders\VKBootstrap\src;..\BTDSTD3\Venders\STB;..\BTDSTD3\Venders\Volk;..\BTDSTD3\Venders\VMA\include;C:\VulkanSDK\1.3.296.0\Include;..\TyGUI\includes;..\TyGUI\Venders\ImGUI;..\Smok\includes;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <Optimization>Full</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
@@ -158,8 +158,8 @@
     <ProjectReference Include="..\TyGUI\TyGUI.vcxproj">
       <Project>{979D320E-03B2-5ABF-CC33-FE1E380757F0}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\SmokACT\SmokACT.vcxproj">
-      <Project>{770638FF-E3E5-B69A-ECFD-4171585C1DFC}</Project>
+    <ProjectReference Include="..\Smok\Smok.vcxproj">
+      <Project>{5F718C7C-4BA8-8D0D-F494-7310E0AA090F}</Project>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
